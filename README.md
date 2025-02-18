@@ -1,11 +1,12 @@
 # miller.yazi
 
-[Miller](https://github.com/johnkerl/miller) now in [yazi](https://github.com/sxyazi/yazi). To install, use the command `ya pack -a Reledia/miller` and add to your `yazi.toml`:
+[Miller](https://github.com/johnkerl/miller) now in [yazi](https://github.com/sxyazi/yazi). To install, use the command `ya pack -a twio142/miller` and add to your `yazi.toml`:
 
 ```toml
 [plugin]
 prepend_previewers = [
-    { mime = "text/csv", run = "miller"},
+    { mime = "text/csv", run = "miller" },
+    { name = "*.csv", run = "miller" },
 ]
 ```
 
@@ -13,15 +14,23 @@ prepend_previewers = [
 
 ![preview](https://github.com/Reledia/miller.yazi/blob/main/preview.png?raw=true)
 
-## Color
+## Custom options
 
-To change colors of keys and values, edit the `init.lua` file after the `--key-color` and `--value-color` flags. To view a list of possible colors, use `mlr --list-color-names`. Make sure to have miller installed and inside your PATH.
+Put the following code in your `init.lua`:
 
-## Other types of file
+```lua
+-- default options
+require("miller").setup({
+    ["-C"] = true,            -- if the value is true, the key will be used as a flag
+    ["--icsv"] = true,
+    ["--opprint"] = true,
+    ["--key-color"] = "208",  -- if the value is a string, both key and value will be passed as arguments
+    ["--value-color"] = "grey70",
+})
 
-To adapt this plugin to the other format supported from miller (like json):
+-- actual command: mlr -C --icsv --opprint --key-color 208 --value-color grey70 cat $FILE
+```
 
-- copy the plugin folder
-- change the name of the copied folder into miller\_(fmt)
-- change the `--icsv` flag inside `init.lua` to `--i(fmt)`
-- add the correct mime/name rule into `prepend_previewers` and the exec as `miller_(fmt)`
+If `--ifs` (input field separator) is not set, the plugin will try to detect it from the file.
+
+Explicitly setting an option to `false` will remove it from the command.
