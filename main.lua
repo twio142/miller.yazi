@@ -25,25 +25,28 @@ printf "${vs[0]}"
 	return sep == "" and "," or sep
 end
 
+M.opts = {
+	["--icsv"] = true,
+	["--opprint"] = true,
+	["-C"] = true,
+	["--ifs"] = detect_separator,
+	["--key-color"] = "208",
+	["--value-color"] = "grey70",
+}
+
 function M:peek(job)
-	local sep = detect_separator(job.file)
-	local child = Command("mlr")
-		:args({
-			"--icsv",
-			"--opprint",
-			"-C",
-			"--key-color",
-			"208",
-			"--ifs",
-			sep,
-			"--value-color",
-			"grey70",
-			"cat",
-			tostring(job.file.url),
-		})
-		:stdout(Command.PIPED)
-		:stderr(Command.PIPED)
-		:spawn()
+	local args = {}
+	for k, v in pairs(M.opts) do
+		table.insert(args, k)
+		if type(v) == "string" then
+			table.insert(args, v)
+		elseif type(v) == "function" and v then
+			table.insert(args, v(job.file))
+		end
+	end
+	table.insert(args, "cat")
+	table.insert(args, tostring(job.file.url))
+	local child = Command("mlr"):args(args):stdout(Command.PIPED):stderr(Command.PIPED):spawn()
 
 	local limit = job.area.h
 	local i, lines = 0, ""
@@ -81,6 +84,18 @@ function M:seek(job)
 			tostring(math.max(0, cx.active.preview.skip + step)),
 			only_if = tostring(job.file.url),
 		})
+	end
+end
+
+function M.setup(_, opts)
+	for k, v in pairs(opts) do
+		if k:find("-") == 1 and (type(v) == "boolean" or type(v) == "string" or type(v) == "function") then
+      if v == false then
+        M.opts[k] = nil
+      else
+        M.opts[k] = v
+      end
+		end
 	end
 end
 
