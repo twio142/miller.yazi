@@ -1,7 +1,32 @@
 ---@diagnostic disable: undefined-global
 local M = {}
 
+local function detect_separator(file)
+	local scpt = [=[
+file="%s"
+ss=(, ";" "|", "	")
+vs=("${ss[@]}")
+read -r fl < "$file"
+while IFS= read -r l; do
+    nvs=()
+    for s in "${vs[@]}"; do
+        fc=$(echo "$fl" | grep -o "$s" | wc -l)
+        cc=$(echo "$l" | grep -o "$s" | wc -l)
+        [[ "$fc" -eq "$cc" && "$cc" -gt 0 ]] && nvs+=("$s")
+    done
+    vs=("${nvs[@]}")
+    [[ ${#vs[@]} -eq 1 ]] && break
+done < "$file"
+printf "${vs[0]}"
+	]=]
+	scpt = string.format(scpt, tostring(file.url))
+	local output, _ = Command("bash"):args({ "-c", scpt }):stdout(Command.PIPED):stderr(Command.PIPED):output()
+	local sep = output.stdout
+	return sep == "" and "," or sep
+end
+
 function M:peek(job)
+	local sep = detect_separator(job.file)
 	local child = Command("mlr")
 		:args({
 			"--icsv",
@@ -9,6 +34,8 @@ function M:peek(job)
 			"-C",
 			"--key-color",
 			"208",
+			"--ifs",
+			sep,
 			"--value-color",
 			"grey70",
 			"cat",
@@ -42,7 +69,7 @@ function M:peek(job)
 		)
 	else
 		lines = lines:gsub("\t", string.rep(" ", PREVIEW.tab_size))
-    ya.preview_widgets(job, { ui.Text(lines):area(job.area) })
+		ya.preview_widgets(job, { ui.Text(lines):area(job.area) })
 	end
 end
 
